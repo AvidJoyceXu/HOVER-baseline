@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 from ..teacher_policy_cfg import AlgorithmCfg, PolicyCfg, RunnerCfg, TeacherPolicyCfg
-from ..utils import get_customized_rsl_rl, get_ppo_runner_and_checkpoint_path
+from ..hover_utils import get_customized_rsl_rl, get_ppo_runner_and_checkpoint_path
 
 get_customized_rsl_rl()
 from rsl_rl.runners import OnPolicyRunner

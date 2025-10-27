@@ -23,7 +23,7 @@ from dataclasses import MISSING, fields
 from datetime import datetime
 
 from teacher_policy_cfg import TeacherPolicyCfg
-from utils import get_ppo_runner_and_checkpoint_path
+from scripts.rsl_rl.hover_utils import get_ppo_runner_and_checkpoint_path
 
 from neural_wbc.student_policy import StudentPolicyTrainer, StudentPolicyTrainerCfg, TeacherPolicy
 

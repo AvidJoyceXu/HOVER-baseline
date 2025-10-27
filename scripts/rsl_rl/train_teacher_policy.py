@@ -46,7 +46,7 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-from utils import get_customized_rsl_rl, get_ppo_runner_and_checkpoint_path
+from scripts.rsl_rl.hover_utils import get_customized_rsl_rl, get_ppo_runner_and_checkpoint_path
 
 import os
 import torch

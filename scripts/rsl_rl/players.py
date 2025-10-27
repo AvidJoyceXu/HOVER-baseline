@@ -23,7 +23,7 @@ from typing import Any
 
 from isaaclab_rl.rsl_rl import export_policy_as_onnx
 from teacher_policy_cfg import TeacherPolicyCfg
-from utils import get_ppo_runner_and_checkpoint_path
+from scripts.rsl_rl.hover_utils import get_ppo_runner_and_checkpoint_path
 from vecenv_wrapper import RslRlNeuralWBCVecEnvWrapper
 
 from neural_wbc.core.evaluator import Evaluator

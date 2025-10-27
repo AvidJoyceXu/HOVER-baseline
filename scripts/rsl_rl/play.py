@@ -19,7 +19,7 @@ from teacher_policy_cfg import TeacherPolicyCfg
 from isaaclab.app import AppLauncher
 
 # local imports
-from utils import get_player_args  # isort: skip
+from scripts.rsl_rl.hover_utils import get_player_args  # isort: skip
 
 
 # add argparse arguments
