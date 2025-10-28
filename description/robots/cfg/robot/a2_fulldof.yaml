@@ -1,0 +1,197 @@
+humanoid_type: a2_fulldof
+bias_offset: False
+has_self_collision: True
+has_mesh: False
+has_jt_limit: False
+has_dof_subset: True
+has_upright_start: True
+has_smpl_pd_offset: False
+remove_toe: False # For humanoid's geom toe
+motion_sym_loss: False
+sym_loss_coef: 1
+big_ankle: True
+
+has_shape_obs: false
+has_shape_obs_disc: false
+has_shape_variation: False
+
+masterfoot: False
+freeze_toe: false
+freeze_hand: False
+box_body: True
+real_weight: True
+real_weight_porpotion_capsules: True
+real_weight_porpotion_boxes: True
+
+body_names: ['base_link', # 把fixed joint合并了，在retarget的时候是否会有问题啊
+
+          'left_hip_roll',
+          'left_hip_yaw',
+          'left_hip_pitch', 
+          'left_tarsus', 
+          'left_toe_pitch', 
+          'left_toe_roll', 
+
+          'right_hip_roll', 
+          'right_hip_yaw', 
+          'right_hip_pitch',
+          'right_tarsus', 
+          'right_toe_pitch', 
+          'right_toe_roll', 
+
+
+          'left_arm_link01',
+          'left_arm_link02',
+          'left_arm_link03',
+          'left_arm_link04', 
+          'left_arm_link05', 
+          'left_arm_link06', 
+          'left_arm_link07', 
+
+          'L_thumb_swing',
+          'L_thumb_1',
+          'L_thumb_2',
+          'L_thumb_3',
+          'L_index_1',
+          'L_index_2',
+          'L_middle_1',
+          'L_middle_2',
+          'L_ring_1',
+          'L_ring_2',
+          'L_pinky_1',
+          'L_pinky_2',
+
+          'right_arm_link01',
+          'right_arm_link02', 
+          'right_arm_link03', 
+          'right_arm_link04', 
+          'right_arm_link05', 
+          'right_arm_link06', 
+          'right_arm_link07', 
+
+          'R_thumb_swing',
+          'R_thumb_1',
+          'R_thumb_2',
+          'R_thumb_3',
+          'R_index_1',
+          'R_index_2',
+          'R_middle_1',
+          'R_middle_2',
+          'R_ring_1',
+          'R_ring_2',
+          'R_pinky_1',
+          'R_pinky_2',
+
+          'head_link01',
+          'head_link02',
+          ]
+
+limb_weight_group: null
+  # - [ 'left_hip_pitch_link', 'left_hip_roll_link', 'left_hip_yaw_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link' ]
+  # - [ 'right_hip_pitch_link', 'right_hip_roll_link', 'right_hip_yaw_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link' ]
+  # - [ 'pelvis', 'waist_yaw_link', 'waist_roll_link', 'torso_link' ]
+  # - [ 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link' ]
+  # - [ 'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link' ]
+
+dof_names: ['idx01_left_hip_roll', 
+            'idx02_left_hip_yaw', 
+            'idx03_left_hip_pitch', 
+            'idx04_left_tarsus',
+            'idx05_left_toe_pitch',
+            'idx06_left_toe_roll',
+            'idx07_right_hip_roll', 
+            'idx08_right_hip_yaw',
+            'idx09_right_hip_pitch',
+            'idx10_right_tarsus',
+            'idx11_right_toe_pitch',
+            'idx12_right_toe_roll',
+            'idx13_left_arm_joint1',  # shoulder pitch
+            'idx14_left_arm_joint2',  # shoulder roll
+            'idx15_left_arm_joint3',  # 
+            'idx16_left_arm_joint4',
+            'idx17_left_arm_joint5', ########### 原来没有的
+            'idx18_left_arm_joint6', 
+            'idx19_left_arm_joint7',
+            'L_thumb_swing_joint',
+            'L_thumb_1_joint',
+            'L_thumb_2_joint',
+            'L_thumb_3_joint',
+            'L_index_1_joint',
+            'L_index_2_joint',
+            'L_middle_1_joint',
+            'L_middle_2_joint',
+            'L_ring_1_joint',
+            'L_ring_2_joint',
+            'L_pinky_1_joint',
+            'L_pinky_2_joint',  ########### 原来没有的
+            'idx20_right_arm_joint1',
+            'idx21_right_arm_joint2',
+            'idx22_right_arm_joint3',
+            'idx23_right_arm_joint4',
+            'idx24_right_arm_joint5', ########### 原来没有的
+            'idx25_right_arm_joint6',
+            'idx26_right_arm_joint7',
+            'R_thumb_swing_joint',
+            'R_thumb_1_joint',
+            'R_thumb_2_joint',
+            'R_thumb_3_joint',
+            'R_index_1_joint',
+            'R_index_2_joint',
+            'R_middle_1_joint',
+            'R_middle_2_joint',
+            'R_ring_1_joint',
+            'R_ring_2_joint',
+            'R_pinky_1_joint',
+            'R_pinky_2_joint', 
+            'idx27_head_joint1',
+            'idx28_head_joint2', ########### 原来没有的
+            ]
+
+right_foot_name:  null # 'r_foot_roll'
+left_foot_name: null # 'l_foot_roll'
+
+asset:
+  assetRoot: ""
+  assetFileName: "../description/robots/a2/robot_descriptions_public/mjcf/model_fulldof_custom.xml"
+  urdfFileName: "../description/robots/a2/robot_descriptions_public/urdf/model_fulldof_custom.urdf"
+
+extend_config:  # 似乎是用来辅助retarget的，例如，我的mjcf文件中，由于是fix关节，手掌这个body被合并掉了，那我似乎就得在这里弄一个extend hand来辅助retarget？？但具体数值我也不太清楚，就手动调？
+    - joint_name: "left_hand_extend"
+      parent_name: "left_arm_link07"
+      pos: [0.0, 0.0, 0.0]
+      rot: [1.0, 0.0, 0.0, 0.0] # w x y z
+    - joint_name: "right_hand_extend"
+      parent_name: "right_arm_link04"
+      pos: [0.0, 0.0, 0.0]
+      rot: [1.0, 0.0, 0.0, 0.0] # w x y z
+    - joint_name: "base_link_extend"
+      parent_name: "base_link"
+      pos: [0.0, 0.0, 0.0]
+      rot: [1.0, 0.0, 0.0, 0.0] # w x y z
+
+base_link: "base_link"
+joint_matches: # smpl2a2
+  - [ "base_link", "Pelvis" ]
+  - [ "left_hip_roll", "L_Hip" ]
+  - [ "left_tarsus", "L_Knee" ]
+  - [ "left_toe_roll", "L_Ankle" ]
+  - [ "right_hip_roll", "R_Hip" ]
+  - [ "right_tarsus", "R_Knee" ]
+  - [ "right_toe_roll", "R_Ankle" ]
+  - [ "left_arm_link02", "L_Shoulder" ]
+  - [ "left_arm_link04", "L_Elbow" ]
+  - [ "left_arm_link07", "L_Hand" ]  # 先用最后一个joint试试行不行？
+  - [ "right_arm_link02", "R_Shoulder" ]
+  - [ "right_arm_link04", "R_Elbow" ]
+  - [ "right_arm_link07", "R_Hand" ]
+  - [ "head_link02", "Head" ]
+
+
+
+
+smpl_pose_modifier:
+  - Pelvis: "[np.pi/2, 0, np.pi/2]"
+  # - L_Shoulder: "[0, 0, -np.pi/2]"
+  # - R_Shoulder: "[0, 0, np.pi/2]"
+  # - L_Elbow: "[0, -np.pi/2, 0]"
+  # - R_Elbow: "[0, np.pi/2, 0]"

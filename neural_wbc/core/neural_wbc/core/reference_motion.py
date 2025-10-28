@@ -21,6 +21,24 @@ from typing import List
 from phc.utils.motion_lib_h1 import MotionLibH1
 from smpl_sim.poselib.skeleton.skeleton3d import SkeletonTree
 
+# Import X2T2 motion library
+import sys
+import os
+# Add motion_lib_x2t2 to path
+motion_lib_path = '/home/descfly/Lingyun/HOVER/motion_lib_x2t2'
+if motion_lib_path not in sys.path:
+    sys.path.append(motion_lib_path)
+
+try:
+    from motion_lib_robot_WTS import MotionLibRobotWTS
+    from .x2t2_motion_config import X2T2MotionLibConfig
+    X2T2_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: X2T2 motion library not available: {e}")
+    MotionLibRobotWTS = None
+    X2T2MotionLibConfig = None
+    X2T2_AVAILABLE = False
+
 
 class ReferenceMotionState:
     """Encapsulates selected fields from a reference motion."""
@@ -102,15 +120,31 @@ class ReferenceMotionManager:
         self._num_envs = num_envs
         self._dt = dt
 
-        self._motion_lib = MotionLibH1(
-            motion_file=cfg.motion_path,
-            mjcf_file=cfg.skeleton_path,
-            device=self._device,
-            masterfoot_conifg=None,
-            fix_height=False,
-            multi_thread=False,
-            extend_head=extend_head,
-        )
+        # Determine which motion library to use based on skeleton path
+        if "h1" in cfg.skeleton_path.lower() or "h1.xml" in cfg.skeleton_path:
+            # Use H1-specific motion library for H1 robot
+            self._motion_lib = MotionLibH1(
+                motion_file=cfg.motion_path,
+                mjcf_file=cfg.skeleton_path,
+                device=self._device,
+                masterfoot_conifg=None,
+                fix_height=False,
+                multi_thread=False,
+                extend_head=extend_head,
+            )
+        elif ("x2" in cfg.skeleton_path.lower()) and X2T2_AVAILABLE and MotionLibRobotWTS is not None and X2T2MotionLibConfig is not None:
+            # Use X2T2-specific motion library for X2T2 robot
+            x2t2_config = X2T2MotionLibConfig()
+            x2t2_config_dict = x2t2_config.to_dict()
+            x2t2_config_dict['motion_folder'] = cfg.motion_path
+            
+            self._motion_lib = MotionLibRobotWTS(
+                motion_lib_cfg=x2t2_config_dict,
+                num_envs=self._num_envs,
+                device=self._device
+            )
+        else:
+            raise ValueError(f"Unsupported skeleton path: {cfg.skeleton_path}. Supported robots: H1, X2T2 (if available)")
 
         self._skeleton_trees = [SkeletonTree.from_mjcf(cfg.skeleton_path)] * self._num_envs
 
@@ -139,11 +173,18 @@ class ReferenceMotionManager:
     @property
     def num_unique_motions(self):
         """Returns the number of unique motions in the dataset."""
-        return self._motion_lib._num_unique_motions
+        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
+            return self._motion_lib._num_unique_motions
+        else:
+            return self._motion_lib._num_unique_motions
 
     @property
     def body_extended_names(self) -> list[str]:
-        return self._motion_lib.mesh_parsers.model_names
+        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
+            # X2T2 motion library uses different attribute name
+            return getattr(self._motion_lib.mesh_parsers, 'model_names', [])
+        else:
+            return self._motion_lib.mesh_parsers.model_names
 
     def get_motion_num_steps(self):
         """Gets the number of motion steps/frames of the sampled motions."""
@@ -151,13 +192,21 @@ class ReferenceMotionManager:
 
     def load_motions(self, random_sample: bool, start_idx: int):
         """Loads motions from the motion dataset."""
-        self._motion_lib.load_motions(
-            skeleton_trees=self._skeleton_trees,
-            gender_betas=[torch.zeros(17)] * self._num_envs,
-            limb_weights=[np.zeros(10)] * self._num_envs,
-            random_sample=random_sample,
-            start_idx=start_idx,
-        )
+        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
+            # X2T2 motion library has different interface
+            self._motion_lib.load_motions(
+                start_idx=start_idx,
+            )
+        else:
+            # H1 motion library interface
+            self._motion_lib.load_motions(
+                skeleton_trees=self._skeleton_trees,
+                gender_betas=[torch.zeros(17)] * self._num_envs,
+                limb_weights=[np.zeros(10)] * self._num_envs,
+                random_sample=random_sample,
+                start_idx=start_idx,
+            )
+        
         self._motion_len = self._motion_lib.get_motion_length(self._motion_ids)
         self.reset_motion_start_times(env_ids=self._motion_ids, sample=False)
 
@@ -185,7 +234,17 @@ class ReferenceMotionManager:
     ) -> ReferenceMotionState:
         """Query a reference motion frame from motion lib."""
         motion_times = episode_length_buf * self._dt + self._motion_start_times
-        motion_res = self._motion_lib.get_motion_state(self._motion_ids, motion_times, offset=offset)
+        
+        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
+            # X2T2 motion library interface
+            motion_res = self._motion_lib.get_motion_state(
+                motion_ids=self._motion_ids, 
+                motion_times=motion_times, 
+                offset=offset
+            )
+        else:
+            # H1 motion library interface
+            motion_res = self._motion_lib.get_motion_state(self._motion_ids, motion_times, offset=offset)
 
         if terrain_heights is not None:
             delta_height = terrain_heights.clone()
