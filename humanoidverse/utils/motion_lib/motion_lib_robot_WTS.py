@@ -159,17 +159,20 @@ class MotionLibBase():
         self._motion_data_keys = keys # np.array(keys, dtype=object)
 
         self.name2label = {
-            'jump': 0,
-            'rot_jump': 1,
-            'run': 2,
-            'run_left': 3,
-            'run_right': 4,
-            'walk': 5,
-            'stand': 6,
+            'back_kick': 0,
+            'jump': 1,
+            'jump_kick': 2,
+            'punch': 3, 
+            'rot_jump': 4,
+            'run': 5,
+            'run_left': 6,
+            'run_right': 7,
+            'stand': 8,
+            'walk': 9,
         }
         self._motion_data_label = F.one_hot(
             torch.tensor([self.name2label.get(k.rsplit('_', 1)[0], -1) for k in self._motion_data_keys],device='cuda'),
-            num_classes=7
+            num_classes=len(self.name2label)
         ).to(torch.float32)
         
         self._num_unique_motions = len(self._motion_data_list)

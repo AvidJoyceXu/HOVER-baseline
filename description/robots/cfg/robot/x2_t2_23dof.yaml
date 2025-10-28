@@ -111,8 +111,8 @@ left_foot_name: null # 'l_foot_roll'
 
 asset:
   assetRoot: "./"
-  assetFileName: "../description/robots/x2_t2/mjcf_mc/x2_mc_kungfu.xml"
-  urdfFileName: "../description/robots/x2_t2/urdf/x2_t2_jw_collision_kungfu.urdf"
+  assetFileName: "description/robots/x2_t2/mjcf_mc/x2_mc_kungfu.xml"
+  urdfFileName: "description/robots/x2_t2/urdf/x2_t2_jw_collision_kungfu.urdf"
   
 
 extend_config:  # 似乎是用来辅助retarget的
