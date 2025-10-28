@@ -543,7 +543,6 @@ class NeuralWBCEnv(DirectRLEnv):
         return self.episode_length_buf * self.cfg.decimation * self.cfg.dt
 
     def _get_policy_observation_noise_scale(self):
-        noise_vec = torch.zeros(self.num_observations, device=self.device)
         observation_body_num = len(self._tracked_body_ids)
         curr_obs_len = 0
 
@@ -559,6 +558,11 @@ class NeuralWBCEnv(DirectRLEnv):
             ("ref_body_pos", observation_body_num * 3),
             ("ref_body_rot", observation_body_num * 6),
         ]
+
+        # Calculate the actual teacher policy observation size
+        actual_teacher_obs_size = sum(length for _, length in noise_config) + self.num_actions
+        
+        noise_vec = torch.zeros(actual_teacher_obs_size, device=self.device)
 
         for key, length in noise_config:
             noise_vec[curr_obs_len : curr_obs_len + length] = (

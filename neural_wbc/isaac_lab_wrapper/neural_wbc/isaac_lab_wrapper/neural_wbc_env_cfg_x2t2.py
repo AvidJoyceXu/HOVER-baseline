@@ -107,8 +107,8 @@ X2T2_CFG = ArticulationCfg(
 class NeuralWBCEnvCfgX2T2(NeuralWBCEnvCfg):
     # General parameters:
     action_space = 23
-    observation_space = 1105  # Will be calculated based on joint count and other factors
-    state_space = 1182  # Will be calculated based on joint count and other factors
+    observation_space = 1073  # Calculated: 27 tracked bodies * (3+6+3+3+3+6+3+3+3+6) + 23 actions = 1073
+    state_space = 1164  # Calculated: teacher_obs (1073) + privileged_obs (91) = 1164
 
     # Distillation parameters:
     single_history_dim = 75  # 23 joints * 3 + 6 for base = 75

@@ -17,27 +17,18 @@ import torch
 from dataclasses import dataclass
 from typing import List
 
-# TODO: Replace MotionLibH1 with the agnostic version when it's ready.
+# Import motion libraries for different robot embodiments
 from phc.utils.motion_lib_h1 import MotionLibH1
 from smpl_sim.poselib.skeleton.skeleton3d import SkeletonTree
 
 # Import X2T2 motion library
-import sys
-import os
-# Add motion_lib_x2t2 to path
-motion_lib_path = '/home/descfly/Lingyun/HOVER/motion_lib_x2t2'
-if motion_lib_path not in sys.path:
-    sys.path.append(motion_lib_path)
+import yaml
+from pathlib import Path
 
-try:
-    from motion_lib_robot_WTS import MotionLibRobotWTS
-    from .x2t2_motion_config import X2T2MotionLibConfig
-    X2T2_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: X2T2 motion library not available: {e}")
-    MotionLibRobotWTS = None
-    X2T2MotionLibConfig = None
-    X2T2_AVAILABLE = False
+from humanoidverse.utils.motion_lib.motion_lib_robot_WTS import MotionLibRobotWTS
+from humanoidverse.utils.motion_lib.skeleton import SkeletonTree as HumanoidverseSkeletonTree
+X2T2_AVAILABLE = True
+
 
 
 class ReferenceMotionState:
@@ -132,28 +123,76 @@ class ReferenceMotionManager:
                 multi_thread=False,
                 extend_head=extend_head,
             )
-        elif ("x2" in cfg.skeleton_path.lower()) and X2T2_AVAILABLE and MotionLibRobotWTS is not None and X2T2MotionLibConfig is not None:
+        elif "x2" in cfg.skeleton_path.lower() or "x2_mc" in cfg.skeleton_path:
             # Use X2T2-specific motion library for X2T2 robot
-            x2t2_config = X2T2MotionLibConfig()
-            x2t2_config_dict = x2t2_config.to_dict()
-            x2t2_config_dict['motion_folder'] = cfg.motion_path
+            if not X2T2_AVAILABLE:
+                raise ImportError("X2T2 motion library not available")
+            
+            # Load X2T2 configuration
+            config_path = Path(cfg.skeleton_path).parent.parent.parent / "cfg" / "robot" / "x2_t2_23dof.yaml"
+            if not config_path.exists():
+                # Fallback to default config if specific config not found
+                config_path = Path("description/robots/cfg/robot/x2_t2_23dof.yaml")
+            
+            with open(config_path, 'r') as f:
+                motion_lib_cfg = yaml.safe_load(f)
+            
+            # Convert to EasyDict for compatibility
+            from easydict import EasyDict
+            motion_lib_cfg = EasyDict(motion_lib_cfg)
+            
+            # Set motion file path
+            motion_lib_cfg.motion_folder = cfg.motion_path
             
             self._motion_lib = MotionLibRobotWTS(
-                motion_lib_cfg=x2t2_config_dict,
+                motion_lib_cfg=motion_lib_cfg,
                 num_envs=self._num_envs,
                 device=self._device
             )
         else:
-            raise ValueError(f"Unsupported skeleton path: {cfg.skeleton_path}. Supported robots: H1, X2T2 (if available)")
+            raise ValueError(f"Unsupported skeleton path: {cfg.skeleton_path}. Supported robots: H1, X2T2")
 
-        self._skeleton_trees = [SkeletonTree.from_mjcf(cfg.skeleton_path)] * self._num_envs
+        # Load skeleton trees based on robot type
+        if "h1" in cfg.skeleton_path.lower() or "h1.xml" in cfg.skeleton_path:
+            self._skeleton_trees = [SkeletonTree.from_mjcf(cfg.skeleton_path)] * self._num_envs
+        elif "x2" in cfg.skeleton_path.lower() or "x2_mc" in cfg.skeleton_path:
+            # X2T2 uses humanoidverse skeleton tree
+            self._skeleton_trees = [HumanoidverseSkeletonTree.from_mjcf(cfg.skeleton_path)] * self._num_envs
+        else:
+            # Default to original skeleton tree
+            self._skeleton_trees = [SkeletonTree.from_mjcf(cfg.skeleton_path)] * self._num_envs
 
-        self._motion_ids = torch.arange(self._num_envs).to(self._device)
         self._motion_start_times = torch.zeros(
             self._num_envs, dtype=torch.float32, device=self._device, requires_grad=False
         )
 
+        self._motion_ids = torch.arange(self._num_envs).to(self._device)
+        # Ensure motion_ids are within valid range
+        self._validate_and_fix_motion_ids()
+
         self.load_motions(random_sample=random_sample, start_idx=0)
+        
+
+    def _validate_and_fix_motion_ids(self):
+        """Validate and fix motion_ids to ensure they are within valid range."""
+        num_unique_motions = self.num_unique_motions
+        
+        if num_unique_motions == 0:
+            raise ValueError("No motions loaded in motion library")
+        
+        # Check if any motion_ids are out of bounds
+        max_valid_id = num_unique_motions - 1
+        invalid_mask = self._motion_ids > max_valid_id
+        
+        if invalid_mask.any():
+            print(f"Warning: Some motion_ids are out of bounds. Clamping to valid range [0, {max_valid_id}]")
+            # Clamp motion_ids to valid range
+            self._motion_ids = torch.clamp(self._motion_ids, 0, max_valid_id)
+            
+            # If we have fewer unique motions than environments, we need to cycle through motions
+            if num_unique_motions < self._num_envs:
+                print(f"Warning: Only {num_unique_motions} unique motions available for {self._num_envs} environments. Cycling through motions.")
+                self._motion_ids = torch.remainder(self._motion_ids, num_unique_motions)
 
     @property
     def motion_lib(self):
@@ -173,26 +212,29 @@ class ReferenceMotionManager:
     @property
     def num_unique_motions(self):
         """Returns the number of unique motions in the dataset."""
-        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
-            return self._motion_lib._num_unique_motions
-        else:
-            return self._motion_lib._num_unique_motions
+        return getattr(self._motion_lib, '_num_unique_motions', 0)
 
     @property
     def body_extended_names(self) -> list[str]:
-        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
-            # X2T2 motion library uses different attribute name
-            return getattr(self._motion_lib.mesh_parsers, 'model_names', [])
+        if isinstance(self._motion_lib, MotionLibRobotWTS):
+            # X2T2 motion library uses body_names_augment attribute
+            return getattr(self._motion_lib.mesh_parsers, 'body_names_augment', [])
         else:
-            return self._motion_lib.mesh_parsers.model_names
+            # H1 motion library uses model_names attribute
+            return getattr(self._motion_lib.mesh_parsers, 'model_names', [])
 
     def get_motion_num_steps(self):
         """Gets the number of motion steps/frames of the sampled motions."""
-        return self._motion_lib.get_motion_num_steps()
+        if hasattr(self._motion_lib, 'get_motion_num_steps'):
+            return self._motion_lib.get_motion_num_steps()  # type: ignore
+        else:
+            # Fallback for motion libraries that don't have this method
+            motion_lengths = getattr(self._motion_lib, '_motion_lengths', [])
+            return len(motion_lengths)
 
     def load_motions(self, random_sample: bool, start_idx: int):
         """Loads motions from the motion dataset."""
-        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
+        if isinstance(self._motion_lib, MotionLibRobotWTS):
             # X2T2 motion library has different interface
             self._motion_lib.load_motions(
                 start_idx=start_idx,
@@ -235,7 +277,7 @@ class ReferenceMotionManager:
         """Query a reference motion frame from motion lib."""
         motion_times = episode_length_buf * self._dt + self._motion_start_times
         
-        if X2T2_AVAILABLE and MotionLibRobotWTS is not None and isinstance(self._motion_lib, MotionLibRobotWTS):
+        if isinstance(self._motion_lib, MotionLibRobotWTS):
             # X2T2 motion library interface
             motion_res = self._motion_lib.get_motion_state(
                 motion_ids=self._motion_ids, 
