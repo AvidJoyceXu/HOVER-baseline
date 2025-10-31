@@ -164,7 +164,13 @@ class OnPolicyRunner:
                 self.log(locals())
 
             if it % self.save_interval == 0:
-                self.save(os.path.join(self.log_dir, "model_{}.pt".format(it)))
+                # Save a periodic checkpoint with the correct loop iteration embedded.
+                # Previously, checkpoints saved inside the loop always stored
+                # self.current_learning_iteration (which is only updated after the loop),
+                # resulting in an "iter" field of 0 for all periodic checkpoints.
+                # This caused resumes from e.g. model_40000.pt to reset iteration to 0
+                # and break curricula/schedulers. We now pass the actual loop index.
+                self.save(os.path.join(self.log_dir, "model_{}.pt".format(it)), iteration=it)
             ep_infos.clear()
 
         self.current_learning_iteration += num_learning_iterations
@@ -276,12 +282,15 @@ class OnPolicyRunner:
         seconds: float = total_seconds % 60
         return f"{hours:.0f}h, {minutes:.0f}m, {seconds:.1f}s"
 
-    def save(self, path, infos=None):
+    def save(self, path, iteration=None, infos=None):
         torch.save(
             {
                 "model_state_dict": self.alg.actor_critic.state_dict(),
                 "optimizer_state_dict": self.alg.optimizer.state_dict(),
-                "iter": self.current_learning_iteration,
+                # Store the precise iteration associated with this checkpoint. If an
+                # explicit value is provided (e.g., from the training loop), use it;
+                # otherwise fall back to the runner's current_learning_iteration.
+                "iter": self.current_learning_iteration if iteration is None else iteration,
                 "infos": infos,
             },
             path,
@@ -293,6 +302,7 @@ class OnPolicyRunner:
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
+        # self.current_learning_iteration = 40000
         return loaded_dict["infos"]
 
     def get_inference_policy(self, device=None):

@@ -134,7 +134,8 @@ class ReferenceMotionManager:
                 # Fallback to default config if specific config not found
                 config_path = Path("description/robots/cfg/robot/x2_t2_23dof.yaml")
             
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                print("config path: ", config_path)
                 motion_lib_cfg = yaml.safe_load(f)
             
             # Convert to EasyDict for compatibility
@@ -227,10 +228,22 @@ class ReferenceMotionManager:
         """Gets the number of motion steps/frames of the sampled motions."""
         if hasattr(self._motion_lib, 'get_motion_num_steps'):
             return self._motion_lib.get_motion_num_steps()  # type: ignore
-        else:
-            # Fallback for motion libraries that don't have this method
-            motion_lengths = getattr(self._motion_lib, '_motion_lengths', [])
-            return len(motion_lengths)
+        # Fallback for motion libraries that don't have this method (e.g., X2T2 MotionLibRobotWTS)
+        # Prefer using per-motion frame counts when available.
+        if hasattr(self._motion_lib, '_motion_num_frames'):
+            motion_num_frames = getattr(self._motion_lib, '_motion_num_frames')
+            if torch.is_tensor(motion_num_frames):
+                return motion_num_frames[self._motion_ids].to(device=self._device)
+            else:
+                return torch.as_tensor(motion_num_frames, dtype=torch.long, device=self._device)[self._motion_ids]
+        # Last resort: derive steps from motion lengths and dt if present.
+        if hasattr(self._motion_lib, '_motion_lengths') and hasattr(self._motion_lib, '_motion_dt'):
+            motion_lengths = getattr(self._motion_lib, '_motion_lengths')
+            motion_dt = getattr(self._motion_lib, '_motion_dt')
+            if torch.is_tensor(motion_lengths) and torch.is_tensor(motion_dt):
+                return torch.ceil(motion_lengths[self._motion_ids] / motion_dt[self._motion_ids]).to(torch.long)
+        # If nothing else is available, return a conservative tensor of ones to avoid crashes.
+        return torch.ones(self._num_envs, dtype=torch.long, device=self._device)
 
     def load_motions(self, random_sample: bool, start_idx: int):
         """Loads motions from the motion dataset."""

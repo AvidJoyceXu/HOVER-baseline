@@ -138,7 +138,7 @@ class NeuralWBCEnvCfgX2T2(NeuralWBCEnvCfg):
                 ".*_ankle_pitch_joint": 13.0,
                 ".*_ankle_roll_joint": 19.7,
             },
-            stiffness=0,
+            stiffness=0, # Will be overridden by cfg.stiffness
             damping=0,
         ),
         "waist": IdealPDActuatorCfg(
@@ -368,7 +368,7 @@ class NeuralWBCEnvCfgX2T2(NeuralWBCEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.reference_motion_manager.motion_path = get_data_path("motions/stable_punch.pkl")
+        self.reference_motion_manager.motion_path = "neural_wbc/data/data/x2_t2_23dof_retarget_motion_dynamic_adjust" # Should be overridden by command line argument
         self.reference_motion_manager.skeleton_path = "description/robots/x2_t2/mjcf_mc/x2_mc_wts_kungfu.xml"
 
         if self.terrain.terrain_generator == HARD_ROUGH_TERRAINS_CFG:
