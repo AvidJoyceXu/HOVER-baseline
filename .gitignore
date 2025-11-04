@@ -3,3 +3,5 @@
 logs/
 /data/
 third_party/human2humanoid
+neural_wbc/data/data/*
+*.pkl

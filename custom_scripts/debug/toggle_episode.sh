@@ -1,0 +1,1 @@
+${ISAACLAB_PATH:?}/isaaclab.sh -p custom_scripts/debug/whole_episode.py --max_steps 12000 --vis_markers --xyzw_input

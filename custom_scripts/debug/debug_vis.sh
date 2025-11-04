@@ -1,0 +1,1 @@
+${ISAACLAB_PATH:?}/isaaclab.sh -p custom_scripts/debug/check_joint_alignment.py
